@@ -72,7 +72,7 @@ if [ $typecnt -ne 1 ]; then
 elif [ $types = "string" ]; then
   outScript_foreach="
     foreach(var item in linqed){
-      $outScript_string
+      $outScript_single
     }
   "
 else
@@ -103,7 +103,11 @@ while [ $# -gt 0 ] ; do
       query="_=>"$(echo $query|sed 's/\$/_.Item/g')
     fi
   fi
-
+  
+  if [ "$query" = "" ] || [ "$(grep $query $selfPath/../doc/methods.txt )" != "" ]; then
+    echo -e "\e[1;31mInvalid Query. @$func($query)\e[0;39m"
+    exit 1
+  fi
   
   #Convert ex) select -> Select
   func=$(echo $func|sed 's|\(.*\)|\L\1|')
@@ -130,6 +134,6 @@ else
 fi
 
 script="$script $dockedQuery $outScript_foreach"
-
+#echo $script
 csharp -e "$script"
 
