@@ -16,6 +16,47 @@ types=`echo $types|sed -E 's/(\[|\])//g'`
 typecnt=`echo $types|sed -E 's/([a-z]|[A-Z]|[0-9])//g'|wc -m`
 
 
+
+innerValueClass_members=$(echo $types|sed 's/,/\n/g'|awk 'BEGIN{
+  idx=1
+}{
+  print "public "$1" Item"idx";"
+  idx++
+}')
+innerValueClass_Constructer="public InnerValueClass(
+  $(echo $types|sed 's/,/\n/g'|awk '
+    BEGIN{idx=1}
+    {
+      printf "%s item%d,",$1,idx
+      idx++
+    }
+  '|sed 's/,$//g')
+){
+  $(echo $types|sed 's/,/\n/g'|awk 'BEGIN{idx=1}{
+    print "Item"idx" = item"idx";"
+    idx++
+  }
+  ')
+}"
+innerValueClass_ToString="
+public override string ToString(){
+  return $(echo $types|sed 's/,/\n/g'|awk 'BEGIN{idx=1}{
+    printf "Item%d+\" \"+",idx
+    idx++
+  }'|sed 's/+$//g');
+}
+"
+
+innerValueClass="
+class InnerValueClass{
+  $innerValueClass_members
+  $innerValueClass_Constructer
+  $innerValueClass_ToString
+}
+"
+
+
+
 getScript_single_no_string="
   var list=new List<$types>();
   string s;
@@ -48,40 +89,15 @@ typeBox=$(echo "$types"|sed 's/,/\n/g'|awk '
 #echo $typeBox
 
 getScript_tuple="
-  var list=new List<Tuple<$types>>();
+  var list=new List<InnerValueClass>();
   string s;
   while((s=Console.ReadLine())!=null){
     var items=s.Split(' ').ToArray();
-    var tuple=new Tuple<$types>($typeBox);
+    var tuple=new InnerValueClass($typeBox);
     list.Add(tuple);
   }
 "
-outScript_single="Console.WriteLine(item);"
-
-outScript_tuple="Console.WriteLine("$(seq 1 $typecnt|awk '
-  {
-    printf "item.Item%d+\" \"+",$1
-  }
-'|sed 's/\+$//g')");"
-if [ $typecnt -ne 1 ]; then
-  outScript_foreach="
-    foreach(var item in linqed){
-      $outScript_tuple
-    }
-  "
-elif [ $types = "string" ]; then
-  outScript_foreach="
-    foreach(var item in linqed){
-      $outScript_single
-    }
-  "
-else
-  outScript_foreach="
-    foreach(var item in linqed){
-      $outScript_single
-    }
-  "
-fi
+outScript_foreach="linqed.WL();"
 
 #echo $getScript_tuple
 
@@ -103,11 +119,7 @@ while [ $# -gt 0 ] ; do
         query=$(echo $query|sed 's/\$/item.Item/g')
       fi
     fi
-    outScript_foreach="
-      foreach(var item in linqed){
-        $query;
-      }
-    "
+    outScript_foreach="$query"
     continue
   fi
 
@@ -115,13 +127,15 @@ while [ $# -gt 0 ] ; do
   #ex) Select $1 -> Select _=>_.Item1
   if [[ $query =~ '$' ]]; then
     if [ $typecnt -eq 1 ]; then
-      query="$(echo $query|sed -E 's/\$[0-9]+/_=>_/g')"
+      query="$(echo "_=>"$query|sed -E 's/\$[0-9]+/_/g')"
     else
       query="_=>"$(echo $query|sed 's/\$/_.Item/g')
     fi
   fi
   
-  if [ "$query" = "" ] || [ "$(grep $query $selfPath/../doc/methods.txt )" != "" ]; then
+  grquery=$(echo $query|sed s'/ //g')
+
+  if [ "$(grep $grquery $selfPath/../doc/methods.txt )" != "" ]; then
     echo -e "\e[1;31mInvalid Query. @$func($query)\e[0;39m"
     exit 1
   fi
@@ -136,6 +150,7 @@ while [ $# -gt 0 ] ; do
     func=$func_greped
   fi
   dockedQuery=$dockedQuery".$func($query)"
+  #echo $dockedQuery
 done
 dockedQuery=$dockedQuery";"
 
@@ -152,5 +167,51 @@ fi
 
 script="$script $dockedQuery $outScript_foreach"
 #echo $script
-csharp -e "$script"
+#if [ $typecnt -gt 1 ]; then
+#  csharp -e "$script"|sed -E 's/(^\(|\)$)//g;s/, / /g'
+#else
+#  csharp -e "$script"
+#fi
 
+
+cs_header="
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Program{
+  static void Main(){
+    new Calc().Solve();
+  }
+$innerValueClass
+
+  class Calc{
+    public void Solve(){
+"
+cs_bottom="
+    }
+  }
+}
+public static class Utils{
+  public static void WL(this object obj) {
+		Console.WriteLine(obj);
+	}
+	public static void WL<T>(this IEnumerable<T> list) {
+		foreach (var item in list) {
+			item.WL();
+	  }
+  }
+}
+"
+
+echo "$cs_header $script $cs_bottom" > $selfPath/script.cs
+
+mcs $selfPath/script.cs 
+
+if [ $typecnt -gt 1 ]; then
+  $selfPath/script.exe|sed -E 's/(^\(|\)$)//g;s/, / /g'
+  :
+else
+  $selfPath/script.exe
+  :
+fi
