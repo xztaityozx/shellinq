@@ -209,9 +209,7 @@ echo "$cs_header $script $cs_bottom" > $selfPath/script.cs
 mcs $selfPath/script.cs 
 
 if [ $typecnt -gt 1 ]; then
-  $selfPath/script.exe|sed -E 's/(^\(|\)$)//g;s/, / /g'
-  :
+  mono $selfPath/script.exe|sed -E 's/(^\(|\)$)//g;s/, / /g'
 else
-  $selfPath/script.exe
-  :
+  mono $selfPath/script.exe
 fi
