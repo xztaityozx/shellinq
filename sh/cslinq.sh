@@ -110,6 +110,9 @@ while [ $# -gt 0 ] ; do
   query="$1"
   shift
 
+  # remove \n
+  query=$(echo $query|sed 's/\n//g')
+
   # -o option
   if [ "$func" = "-o" ]; then
     if [[ $query =~ '$' ]]; then
@@ -119,7 +122,7 @@ while [ $# -gt 0 ] ; do
         query=$(echo $query|sed 's/\$/item.Item/g')
       fi
     fi
-    outScript_foreach="$query"
+    outScript_foreach="foreach(var item in linqed){$query}"
     continue
   fi
 
