@@ -4,20 +4,43 @@
 #dir path
 
 selfPath="$(cd "$(dirname "${BASH_SOURCE:-$0}")"; pwd)"
+tmpPath="$selfPath/../tmp/tmp.txt"
+echo  > $tmpPath
+sed '/^$/d' -i $tmpPath
+
+
+read firstLINE
+firstLINE=$(echo $firstLINE|sed -E 's/ +/ /g')
+expectTypecnt=$(echo $firstLINE|sed -E 's/( |\t)/\n/g'|sed '/^$/d'|wc -l)
+
 # 型リスト
 if [[ "$1" =~ ^\[.*\]$ ]]; then
   types="$1"
   shift
 else
-  types="[int]"
+  types="["$(echo $firstLINE|sed 's/ /\n/g'|while read LINE;do
+    expr $LINE + 1 > /dev/null 2>&1
+    if [ $? -lt 2 ];then echo -n "int,";continue;fi
+    echo "$LINE"|grep "\."|grep -v "^\."|grep -v "\-\." > /dev/null 2>&1
+    if [ $? -eq 0 ];then res=$(echo "$LINE + 1"|bc 2>&1);
+      if [[ "$res" =~ "error" ]];then echo -n "string,";
+      else echo -n "double,"
+      fi
+    else
+      echo -n "string,"
+    fi
+  done|sed 's/,$//g'
+  )"]"
 fi
 
 types=`echo $types|sed -E 's/(\[|\])//g'`
 typecnt=`echo $types|sed -E 's/([a-z]|[A-Z]|[0-9])//g'|wc -m`
 
+#echo $types
 
+#exit 0
 
-innerValueClass_members=$(echo $types|sed 's/,/\n/g'|awk 'BEGIN{
+innerValueClass_members=$(echo "$types"|sed 's/,/\n/g'|awk 'BEGIN{
   idx=1
 }{
   print "public "$1" Item"idx";"
@@ -104,6 +127,8 @@ outScript_foreach="linqed.WL();"
 #make Query
 dockedQuery="var linqed=list"
 
+outputFormat_flag=0
+
 while [ $# -gt 0 ] ; do
   func="$1"
   shift
@@ -115,6 +140,10 @@ while [ $# -gt 0 ] ; do
 
   # -o option
   if [ "$func" = "-o" ]; then
+    outputFormat_flag=1
+    if [[ $query =~ '$0' ]];then
+      query=$(echo $query|sed 's/$0/item.ToString()/g')
+    fi
     if [[ $query =~ '$' ]]; then
       if [ $typecnt -eq 1 ]; then
         query=$(echo $query|sed 's/$1/item/g')
@@ -129,10 +158,12 @@ while [ $# -gt 0 ] ; do
   #$1,$2,...,.$X -> list[i].Item1,.Item2,...,.ItemX
   #ex) Select $1 -> Select _=>_.Item1
   if [[ $query =~ '$' ]]; then
-    if [ $typecnt -eq 1 ]; then
-      query="$(echo "_=>"$query|sed -E 's/\$[0-9]+/_/g')"
+    if [ "$query" = '$0' ]; then
+      query="_=>_.ToString()"
+    elif [ $typecnt -eq 1 ]; then
+      query="$(echo "_=>"$query|sed 's/$0/_.ToString()/g'|sed -E 's/\$[1-9]+/_/g')"
     else
-      query="_=>"$(echo $query|sed 's/\$/_.Item/g')
+      query="_=>"$(echo $query|sed 's/$0/_.ToString()/g'|sed 's/\$/_.Item/g')
     fi
   fi
   
@@ -155,12 +186,17 @@ while [ $# -gt 0 ] ; do
   dockedQuery=$dockedQuery".$func($query)"
   #echo $dockedQuery
 done
-dockedQuery=$dockedQuery";"
+
+if [ $outputFormat_flag -eq 1 ]; then
+  dockedQuery=$dockedQuery";"
+else
+  dockedQuery=$dockedQuery".Select(_=>{Console.WriteLine(_.ToString()); return 0;});"
+fi
 
 
 #generate script
 script=""
-if [ $types = "string" ]; then
+if [ "$types" = "string" ]; then
   script="$getScript_string"
 elif [ $typecnt -eq 1 ]; then
   script="$getScript_single_no_string"
@@ -168,7 +204,10 @@ else
   script="$getScript_tuple"
 fi
 
-script="$script $dockedQuery $outScript_foreach"
+script="$script $dockedQuery "
+  if [ $outputFormat_flag -eq 1 ]; then
+    script=$script" $outScript_foreach"
+  fi
 #echo $script
 #if [ $typecnt -gt 1 ]; then
 #  csharp -e "$script"|sed -E 's/(^\(|\)$)//g;s/, / /g'
@@ -195,24 +234,21 @@ cs_bottom="
     }
   }
 }
-public static class Utils{
-  public static void WL(this object obj) {
-		Console.WriteLine(obj);
-	}
-	public static void WL<T>(this IEnumerable<T> list) {
-		foreach (var item in list) {
-			item.WL();
-	  }
-  }
-}
 "
 
 echo "$cs_header $script $cs_bottom" > $selfPath/script.cs
 
-mcs $selfPath/script.cs 
+mcs $selfPath/script.cs 2>&1 1>/dev/null 
+
+if [ $? != 0 ]; then
+  exit 1
+fi
+
 
 if [ $typecnt -gt 1 ]; then
-  mono $selfPath/script.exe|sed -E 's/(^\(|\)$)//g;s/, / /g'
+  echo $firstLINE|mono $selfPath/script.exe
+  sed -E 's/ +/ /g' | mono $selfPath/script.exe|sed -E 's/(^\(|\)$)//g;s/, / /g'
 else
-  mono $selfPath/script.exe
+  echo $firstLINE|mono $selfPath/script.exe
+  sed -E 's/ +/ /g' | mono $selfPath/script.exe
 fi

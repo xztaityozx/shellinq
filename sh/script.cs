@@ -31,18 +31,8 @@ public override string ToString(){
   while((s=Console.ReadLine())!=null){
     list.Add(int.Parse(s));
   }
- var linqed=list.Select(_=>_%2==0); linqed.WL(); 
+ var linqed=list.Select(x=>{return x%15==0?"FizzBuzz":x%5==0?"Buzz":x%3==0?"Fizz":""+x;}).Select(_=>{Console.WriteLine(_.ToString()); return 0;});  
     }
-  }
-}
-public static class Utils{
-  public static void WL(this object obj) {
-		Console.WriteLine(obj);
-	}
-	public static void WL<T>(this IEnumerable<T> list) {
-		foreach (var item in list) {
-			item.WL();
-	  }
   }
 }
 
