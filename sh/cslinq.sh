@@ -13,6 +13,7 @@ read firstLINE
 firstLINE=$(echo $firstLINE|sed -E 's/ +/ /g')
 expectTypecnt=$(echo $firstLINE|sed -E 's/( |\t)/\n/g'|sed '/^$/d'|wc -l)
 
+
 # 型リスト
 if [[ "$1" =~ ^\[.*\]$ ]]; then
   types="$1"
@@ -32,6 +33,7 @@ else
   done|sed 's/,$//g'
   )"]"
 fi
+
 
 types=`echo $types|sed -E 's/(\[|\])//g'`
 typecnt=`echo $types|sed -E 's/([a-z]|[A-Z]|[0-9])//g'|wc -m`
@@ -120,7 +122,7 @@ getScript_tuple="
     list.Add(tuple);
   }
 "
-outScript_foreach="linqed.ToList().ForEach(Console.WriteLine);"
+outScript_foreach=""
 
 #echo $getScript_tuple
 
@@ -190,7 +192,7 @@ done
 if [ $outputFormat_flag -eq 1 ]; then
   dockedQuery=$dockedQuery";"
 else
-  dockedQuery=$dockedQuery";"
+  dockedQuery=$dockedQuery";var o=string.Join(Environment.NewLine,linqed);""Console.WriteLine(o);"
 fi
 
 
@@ -217,6 +219,7 @@ cs_header="
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 class Program{
   static void Main(){
@@ -235,9 +238,9 @@ cs_bottom="
 
 echo "$cs_header $script $cs_bottom" > $selfPath/script.cs
 
-mcs $selfPath/script.cs 1>/dev/null 2>/dev/null 
+mcs $selfPath/script.cs
 
-#rm $selfPath/script.cs
+rm $selfPath/script.cs
 
 if [ $? != 0 ]; then
   exit 1
@@ -245,11 +248,11 @@ fi
 
 
 if [ $typecnt -gt 1 ]; then
-  echo $firstLINE|mono $selfPath/script.exe
-  sed -E 's/ +/ /g' | mono $selfPath/script.exe|sed -E 's/(^\(|\)$)//g;s/, / /g'
+  echo $firstLINE|mono $selfPath/script.exe |sed -E 's/(^\(|\)$)//g;s/, / /g'
+   sed -E 's/ +/ /g' | mono $selfPath/script.exe|sed -E 's/(^\(|\)$)//g;s/, / /g' 
 else
-  echo $firstLINE|mono $selfPath/script.exe
-  sed -E 's/ +/ /g' | mono $selfPath/script.exe
+  echo $firstLINE|mono $selfPath/script.exe 
+  sed -E 's/ +/ /g' | mono $selfPath/script.exe 
 fi
 
-#rm $selfPath/script.exe
+rm $selfPath/script.exe
