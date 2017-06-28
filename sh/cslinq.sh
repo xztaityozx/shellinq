@@ -120,7 +120,7 @@ getScript_tuple="
     list.Add(tuple);
   }
 "
-outScript_foreach="linqed.WL();"
+outScript_foreach="linqed.ToList().ForEach(Console.WriteLine);"
 
 #echo $getScript_tuple
 
@@ -190,7 +190,7 @@ done
 if [ $outputFormat_flag -eq 1 ]; then
   dockedQuery=$dockedQuery";"
 else
-  dockedQuery=$dockedQuery".Select(_=>{Console.WriteLine(_.ToString()); return 0;});"
+  dockedQuery=$dockedQuery";"
 fi
 
 
@@ -204,10 +204,7 @@ else
   script="$getScript_tuple"
 fi
 
-script="$script $dockedQuery "
-  if [ $outputFormat_flag -eq 1 ]; then
-    script=$script" $outScript_foreach"
-  fi
+script="$script $dockedQuery $outScript_foreach"
 #echo $script
 #if [ $typecnt -gt 1 ]; then
 #  csharp -e "$script"|sed -E 's/(^\(|\)$)//g;s/, / /g'
@@ -238,9 +235,9 @@ cs_bottom="
 
 echo "$cs_header $script $cs_bottom" > $selfPath/script.cs
 
-mcs $selfPath/script.cs 2>&1 1>/dev/null 
+mcs $selfPath/script.cs 1>/dev/null 2>/dev/null 
 
-rm $selfPath/script.cs
+#rm $selfPath/script.cs
 
 if [ $? != 0 ]; then
   exit 1
@@ -255,4 +252,4 @@ else
   sed -E 's/ +/ /g' | mono $selfPath/script.exe
 fi
 
-rm $selfPath/script.exe
+#rm $selfPath/script.exe
