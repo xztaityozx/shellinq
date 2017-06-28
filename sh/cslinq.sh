@@ -240,6 +240,8 @@ echo "$cs_header $script $cs_bottom" > $selfPath/script.cs
 
 mcs $selfPath/script.cs 2>&1 1>/dev/null 
 
+rm $selfPath/script.cs
+
 if [ $? != 0 ]; then
   exit 1
 fi
@@ -252,3 +254,5 @@ else
   echo $firstLINE|mono $selfPath/script.exe
   sed -E 's/ +/ /g' | mono $selfPath/script.exe
 fi
+
+rm $selfPath/script.exe
