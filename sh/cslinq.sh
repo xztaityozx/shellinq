@@ -192,7 +192,7 @@ done
 if [ $outputFormat_flag -eq 1 ]; then
   dockedQuery=$dockedQuery";"
 else
-  dockedQuery=$dockedQuery";var o=string.Join(Environment.NewLine,linqed);""Console.WriteLine(o);"
+  dockedQuery=$dockedQuery";var o=string.Join(Environment.NewLine,linqed);""Console.Write(o);"
 fi
 
 
@@ -256,3 +256,4 @@ else
 fi
 
 rm $selfPath/script.exe
+echo -e ""
