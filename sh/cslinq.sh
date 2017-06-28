@@ -192,7 +192,7 @@ done
 if [ $outputFormat_flag -eq 1 ]; then
   dockedQuery=$dockedQuery";"
 else
-  dockedQuery=$dockedQuery";var o=string.Join(Environment.NewLine,linqed);""Console.Write(o);"
+  dockedQuery=$dockedQuery";var o=string.Join(Environment.NewLine,linqed);""Console.WriteLine(o);"
 fi
 
 
@@ -251,9 +251,8 @@ if [ $typecnt -gt 1 ]; then
   echo $firstLINE|mono $selfPath/script.exe |sed -E 's/(^\(|\)$)//g;s/, / /g'
    sed -E 's/ +/ /g' | mono $selfPath/script.exe|sed -E 's/(^\(|\)$)//g;s/, / /g' 
 else
-  echo $firstLINE|mono $selfPath/script.exe 
-  sed -E 's/ +/ /g' | mono $selfPath/script.exe 
+  echo $firstLINE|mono $selfPath/script.exe |sed -E '/^$/d' 
+  sed -E 's/ +/ /g' | mono $selfPath/script.exe |sed -E "/^$/d"
 fi
 
 rm $selfPath/script.exe
-echo -e ""
