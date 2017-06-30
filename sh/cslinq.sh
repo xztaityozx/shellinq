@@ -236,23 +236,26 @@ cs_bottom="
 }
 "
 
-echo "$cs_header $script $cs_bottom" > $selfPath/script.cs
+f_name="script"$(date '+%Y%m%d%H%M%S')
+echo "$cs_header $script $cs_bottom" > $selfPath/$f_name.cs
 
-mcs $selfPath/script.cs
 
-rm $selfPath/script.cs
+mcs $selfPath/$f_name.cs -out:$selfPath/$f_name.exe
+
 
 if [ $? != 0 ]; then
+  rm $selfPath/$f_name.cs
   exit 1
 fi
 
+rm $selfPath/$f_name.cs
 
 if [ $typecnt -gt 1 ]; then
-  echo $firstLINE|mono $selfPath/script.exe |sed -E 's/(^\(|\)$)//g;s/, / /g'
-   sed -E 's/ +/ /g' | mono $selfPath/script.exe|sed -E 's/(^\(|\)$)//g;s/, / /g' 
+  echo $firstLINE|mono $selfPath/$f_name.exe |sed -E 's/(^\(|\)$)//g;s/, / /g'
+   sed -E 's/ +/ /g' | mono $selfPath/$f_name.exe|sed -E 's/(^\(|\)$)//g;s/, / /g' 
 else
-  echo $firstLINE|mono $selfPath/script.exe |sed -E '/^$/d' 
-  sed -E 's/ +/ /g' | mono $selfPath/script.exe |sed -E "/^$/d"
+  echo $firstLINE|mono $selfPath/$f_name.exe |sed -E '/^$/d' 
+  sed -E 's/ +/ /g' | mono $selfPath/$f_name.exe |sed -E "/^$/d"
 fi
 
-rm $selfPath/script.exe
+rm $selfPath/$f_name.exe
